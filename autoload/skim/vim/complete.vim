@@ -45,16 +45,16 @@ else
   endfunction
 endif
 
-function! fzf#vim#complete#word(...)
-  return fzf#vim#complete(s:extend({
+function! skim#vim#complete#word(...)
+  return skim#vim#complete(s:extend({
     \ 'source': 'cat /usr/share/dict/words'},
-    \ get(a:000, 0, g:fzf#vim#default_layout)))
+    \ get(a:000, 0, g:skim#vim#default_layout)))
 endfunction
 
 " ----------------------------------------------------------------------------
-" <plug>(fzf-complete-path)
-" <plug>(fzf-complete-file)
-" <plug>(fzf-complete-file-ag)
+" <plug>(skim-complete-path)
+" <plug>(skim-complete-file)
+" <plug>(skim-complete-file-ag)
 " ----------------------------------------------------------------------------
 function! s:file_split_prefix(prefix)
   let expanded = expand(a:prefix)
@@ -123,37 +123,37 @@ function! s:fname_prefix(str)
   return prefix
 endfunction
 
-function! fzf#vim#complete#path(command, ...)
+function! skim#vim#complete#path(command, ...)
   let s:file_cmd = a:command
-  return fzf#vim#complete(s:extend({
+  return skim#vim#complete(s:extend({
   \ 'prefix':  s:function('s:fname_prefix'),
   \ 'source':  s:function('s:file_source'),
-  \ 'options': s:function('s:file_options')}, get(a:000, 0, g:fzf#vim#default_layout)))
+  \ 'options': s:function('s:file_options')}, get(a:000, 0, g:skim#vim#default_layout)))
 endfunction
 
 " ----------------------------------------------------------------------------
-" <plug>(fzf-complete-line)
-" <plug>(fzf-complete-buffer-line)
+" <plug>(skim-complete-line)
+" <plug>(skim-complete-buffer-line)
 " ----------------------------------------------------------------------------
 function! s:reduce_line(lines)
   return join(split(a:lines[0], '\t\zs')[3:], '')
 endfunction
 
 
-function! fzf#vim#complete#line(...)
-  let [display_bufnames, lines] = fzf#vim#_lines(0)
+function! skim#vim#complete#line(...)
+  let [display_bufnames, lines] = skim#vim#_lines(0)
   let nth = display_bufnames ? 4 : 3
-  return fzf#vim#complete(s:extend({
+  return skim#vim#complete(s:extend({
   \ 'prefix':  '^.*$',
   \ 'source':  lines,
   \ 'options': '--tiebreak=index --ansi --nth '.nth.'.. --tabstop=1',
-  \ 'reducer': s:function('s:reduce_line')}, get(a:000, 0, g:fzf#vim#default_layout)))
+  \ 'reducer': s:function('s:reduce_line')}, get(a:000, 0, g:skim#vim#default_layout)))
 endfunction
 
-function! fzf#vim#complete#buffer_line(...)
-  call fzf#vim#complete(s:extend({
+function! skim#vim#complete#buffer_line(...)
+  call skim#vim#complete(s:extend({
   \ 'prefix': '^.*$',
-  \ 'source': s:uniq(getline(1, '$'))}, get(a:000, 0, g:fzf#vim#default_layout)))
+  \ 'source': s:uniq(getline(1, '$'))}, get(a:000, 0, g:skim#vim#default_layout)))
 endfunction
 
 let &cpo = s:cpo_save

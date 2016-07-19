@@ -27,14 +27,14 @@ set cpo&vim
 " ------------------------------------------------------------------
 " Common
 " ------------------------------------------------------------------
-function! fzf#vim#wrap(opts)
+function! skim#vim#wrap(opts)
   return extend(copy(a:opts), {
-  \ 'options': get(a:opts, 'options', '').' --expect='.join(keys(get(g:, 'fzf_action', s:default_action)), ','),
+  \ 'options': get(a:opts, 'options', '').' --expect='.join(keys(get(g:, 'skim_action', s:default_action)), ','),
   \ 'sink*':   get(a:opts, 'sink*', s:function('s:common_sink'))})
 endfunction
 
-function! fzf#vim#layout(...)
-  return (a:0 && a:1) ? {} : copy(get(g:, 'fzf_layout', g:fzf#vim#default_layout))
+function! skim#vim#layout(...)
+  return (a:0 && a:1) ? {} : copy(get(g:, 'skim_layout', g:skim#vim#default_layout))
 endfunction
 
 function! s:strip(str)
@@ -95,17 +95,17 @@ function! s:buflisted()
 endfunction
 
 function! s:defaults()
-  let rules = copy(get(g:, 'fzf_colors', {}))
+  let rules = copy(get(g:, 'skim_colors', {}))
   let colors = join(map(items(filter(map(rules, 'call("s:get_color", v:val)'), '!empty(v:val)')), 'join(v:val, ":")'), ',')
   return empty(colors) ? '' : ('--color='.colors)
 endfunction
 
-function! s:fzf(opts, extra)
-  let extra  = empty(a:extra) ? fzf#vim#layout() : a:extra[0]
+function! s:skim(opts, extra)
+  let extra  = empty(a:extra) ? skim#vim#layout() : a:extra[0]
   let eopts  = has_key(extra, 'options') ? remove(extra, 'options') : ''
   let merged = extend(copy(a:opts), extra)
   let merged.options = join(filter([s:defaults(), get(merged, 'options', ''), eopts], '!empty(v:val)'))
-  return fzf#run(merged)
+  return skim#run(merged)
 endfunction
 
 let s:default_action = {
@@ -125,11 +125,11 @@ function! s:common_sink(lines) abort
     return
   endif
   let key = remove(a:lines, 0)
-  let cmd = get(get(g:, 'fzf_action', s:default_action), key, 'e')
+  let cmd = get(get(g:, 'skim_action', s:default_action), key, 'e')
   if len(a:lines) > 1
-    augroup fzf_swap
+    augroup skim_swap
       autocmd SwapExists * let v:swapchoice='o'
-            \| call s:warn('fzf: E325: swap file exists: '.expand('<afile>'))
+            \| call s:warn('skim: E325: swap file exists: '.expand('<afile>'))
     augroup END
   endif
   try
@@ -149,7 +149,7 @@ function! s:common_sink(lines) abort
     endfor
   finally
     let &autochdir = autochdir
-    silent! autocmd! fzf_swap
+    silent! autocmd! skim_swap
   endtry
 endfunction
 
@@ -190,8 +190,8 @@ endfunction
 " ------------------------------------------------------------------
 " Files
 " ------------------------------------------------------------------
-function! fzf#vim#files(dir, ...)
-  let args = {'options': '-m '.get(g:, 'fzf_files_options', '')}
+function! skim#vim#files(dir, ...)
+  let args = {'options': '-m '.get(g:, 'skim_files_options', '')}
   if !empty(a:dir)
     if !isdirectory(expand(a:dir))
       return s:warn('Invalid directory')
@@ -203,7 +203,7 @@ function! fzf#vim#files(dir, ...)
     let args.options .= ' --prompt '.shellescape(pathshorten(getcwd())).'/'
   endif
 
-  return s:fzf(fzf#vim#wrap(args), a:000)
+  return s:skim(skim#vim#wrap(args), a:000)
 endfunction
 
 " ------------------------------------------------------------------
@@ -214,7 +214,7 @@ function! s:line_handler(lines)
     return
   endif
   normal! m'
-  let cmd = get(get(g:, 'fzf_action', s:default_action), a:lines[0], '')
+  let cmd = get(get(g:, 'skim_action', s:default_action), a:lines[0], '')
   if !empty(cmd) && stridx('edit', cmd) < 0
     execute 'silent' cmd
   endif
@@ -225,7 +225,7 @@ function! s:line_handler(lines)
   normal! ^zz
 endfunction
 
-function! fzf#vim#_lines(all)
+function! skim#vim#_lines(all)
   let cur = []
   let rest = []
   let buf = bufnr('')
@@ -263,12 +263,12 @@ function! fzf#vim#_lines(all)
   return [display_bufnames, extend(cur, rest)]
 endfunction
 
-function! fzf#vim#lines(...)
-  let [display_bufnames, lines] = fzf#vim#_lines(1)
+function! skim#vim#lines(...)
+  let [display_bufnames, lines] = skim#vim#_lines(1)
   let nth = display_bufnames ? 3 : 2
   let [query, args] = (a:0 && type(a:1) == type('')) ?
         \ [a:1, a:000[1:]] : ['', a:000]
-  return s:fzf(fzf#vim#wrap({
+  return s:skim(skim#vim#wrap({
   \ 'source':  lines,
   \ 'sink*':   s:function('s:line_handler'),
   \ 'options': '+m --tiebreak=index --prompt "Lines> " --ansi --extended --nth='.nth.'.. --reverse --tabstop=1'.s:q(query)
@@ -283,7 +283,7 @@ function! s:buffer_line_handler(lines)
     return
   endif
   normal! m'
-  let cmd = get(get(g:, 'fzf_action', s:default_action), a:lines[0], '')
+  let cmd = get(get(g:, 'skim_action', s:default_action), a:lines[0], '')
   if !empty(cmd)
     execute 'silent' cmd
   endif
@@ -297,10 +297,10 @@ function! s:buffer_lines()
     \ 'printf(s:yellow(" %4d ", "LineNr")."\t%s", v:key + 1, v:val)')
 endfunction
 
-function! fzf#vim#buffer_lines(...)
+function! skim#vim#buffer_lines(...)
   let [query, args] = (a:0 && type(a:1) == type('')) ?
         \ [a:1, a:000[1:]] : ['', a:000]
-  return s:fzf(fzf#vim#wrap({
+  return s:skim(skim#vim#wrap({
   \ 'source':  s:buffer_lines(),
   \ 'sink*':   s:function('s:buffer_line_handler'),
   \ 'options': '+m --tiebreak=index --prompt "BLines> " --ansi --extended --nth=2.. --reverse --tabstop=1'.s:q(query)
@@ -310,8 +310,8 @@ endfunction
 " ------------------------------------------------------------------
 " Colors
 " ------------------------------------------------------------------
-function! fzf#vim#colors(...)
-  return s:fzf({
+function! skim#vim#colors(...)
+  return s:skim({
   \ 'source':  map(split(globpath(&rtp, "colors/*.vim"), "\n"),
   \               "substitute(fnamemodify(v:val, ':t'), '\\..\\{-}$', '', '')"),
   \ 'sink':    'colo',
@@ -322,8 +322,8 @@ endfunction
 " ------------------------------------------------------------------
 " Locate
 " ------------------------------------------------------------------
-function! fzf#vim#locate(query, ...)
-  return s:fzf(fzf#vim#wrap({
+function! skim#vim#locate(query, ...)
+  return s:skim(skim#vim#wrap({
   \ 'source':  'locate '.a:query,
   \ 'options': '-m --prompt "Locate> "'
   \}), a:000)
@@ -347,7 +347,7 @@ function! s:history_source(type)
     \ map(list, 's:yellow(printf(fmt, len(list) - v:key), "Number")." ".v:val'))
 endfunction
 
-nnoremap <plug>(-fzf-vim-do) :execute g:__fzf_command<cr>
+nnoremap <plug>(-skim-vim-do) :execute g:__skim_command<cr>
 
 function! s:history_sink(type, lines)
   if len(a:lines) < 2
@@ -361,8 +361,8 @@ function! s:history_sink(type, lines)
     redraw
     call feedkeys(a:type."\<up>")
   else
-    let g:__fzf_command = "normal ".a:type.item."\<cr>"
-    call feedkeys("\<plug>(-fzf-vim-do)")
+    let g:__skim_command = "normal ".a:type.item."\<cr>"
+    call feedkeys("\<plug>(-skim-vim-do)")
   endif
 endfunction
 
@@ -370,8 +370,8 @@ function! s:cmd_history_sink(lines)
   call s:history_sink(':', a:lines)
 endfunction
 
-function! fzf#vim#command_history(...)
-  return s:fzf({
+function! skim#vim#command_history(...)
+  return s:skim({
   \ 'source':  s:history_source(':'),
   \ 'sink*':   s:function('s:cmd_history_sink'),
   \ 'options': '+m --ansi --prompt="Hist:> " --header-lines=1 --expect=ctrl-e --tiebreak=index'}, a:000)
@@ -381,15 +381,15 @@ function! s:search_history_sink(lines)
   call s:history_sink('/', a:lines)
 endfunction
 
-function! fzf#vim#search_history(...)
-  return s:fzf({
+function! skim#vim#search_history(...)
+  return s:skim({
   \ 'source':  s:history_source('/'),
   \ 'sink*':   s:function('s:search_history_sink'),
   \ 'options': '+m --ansi --prompt="Hist/> " --header-lines=1 --expect=ctrl-e --tiebreak=index'}, a:000)
 endfunction
 
-function! fzf#vim#history(...)
-  return s:fzf(fzf#vim#wrap({
+function! skim#vim#history(...)
+  return s:skim(skim#vim#wrap({
   \ 'source':  reverse(s:all_files()),
   \ 'options': '-m --prompt "Hist> "'
   \}), a:000)
@@ -407,19 +407,19 @@ function! s:git_status_sink(lines) abort
   return s:common_sink(lines)
 endfunction
 
-function! fzf#vim#gitfiles(args, ...)
+function! skim#vim#gitfiles(args, ...)
   let root = split(system('git rev-parse --show-toplevel'), '\n')[0]
   if v:shell_error
     return s:warn('Not in git repo')
   endif
   if a:args != '?'
-    return s:fzf(fzf#vim#wrap({
+    return s:skim(skim#vim#wrap({
     \ 'source':  'git ls-files '.a:args,
     \ 'dir':     root,
     \ 'options': '-m --prompt "GitFiles> "'
     \}), a:000)
   endif
-  return s:fzf(fzf#vim#wrap({
+  return s:skim(skim#vim#wrap({
   \ 'source':  'git -c color.status=always status --short',
   \ 'dir':     root,
   \ 'sink*':   s:function('s:git_status_sink'),
@@ -455,14 +455,14 @@ function! s:bufopen(lines)
     return
   endif
   let b = matchstr(a:lines[1], '\[\zs[0-9]*\ze\]')
-  if empty(a:lines[0]) && get(g:, 'fzf_buffers_jump')
+  if empty(a:lines[0]) && get(g:, 'skim_buffers_jump')
     let [t, w] = s:find_open_window(b)
     if t
       call s:jump(t, w)
       return
     endif
   endif
-  let cmd = get(get(g:, 'fzf_action', s:default_action), a:lines[0], '')
+  let cmd = get(get(g:, 'skim_action', s:default_action), a:lines[0], '')
   if !empty(cmd)
     execute 'silent' cmd
   endif
@@ -481,17 +481,17 @@ function! s:format_buffer(b)
 endfunction
 
 function! s:sort_buffers(...)
-  let [b1, b2] = map(copy(a:000), 'get(g:fzf#vim#buffers, v:val, v:val)')
+  let [b1, b2] = map(copy(a:000), 'get(g:skim#vim#buffers, v:val, v:val)')
   " Using minus between a float and a number in a sort function causes an error
   return b1 > b2 ? 1 : -1
 endfunction
 
-function! fzf#vim#buffers(...)
+function! skim#vim#buffers(...)
   let bufs = map(sort(s:buflisted(), 's:sort_buffers'), 's:format_buffer(v:val)')
-  return s:fzf(fzf#vim#wrap({
+  return s:skim(skim#vim#wrap({
   \ 'source':  reverse(bufs),
   \ 'sink*':   s:function('s:bufopen'),
-  \ 'options': '+m -x --tiebreak=index --ansi -d "\t" -n 2,1..2 --prompt="Buf> "',
+  \ 'options': '--tiebreak=score,index --ansi -d "\t" -n 1,0..3 --prompt="Buf> "',
   \}), a:000)
 endfunction
 
@@ -509,7 +509,7 @@ function! s:ag_handler(lines)
     return
   endif
 
-  let cmd = get(get(g:, 'fzf_action', s:default_action), a:lines[0], 'e')
+  let cmd = get(get(g:, 'skim_action', s:default_action), a:lines[0], 'e')
   let list = map(a:lines[1:], 's:ag_to_qf(v:val)')
 
   let first = list[0]
@@ -528,22 +528,23 @@ function! s:ag_handler(lines)
 endfunction
 
 " query, [[ag options], options]
-function! fzf#vim#ag(query, ...)
+function! skim#vim#ag(query, ...)
   let query = empty(a:query) ? '^(?=.)' : a:query
   let args = copy(a:000)
   let ag_opts = len(args) > 1 ? remove(args, 0) : ''
   let command = ag_opts . ' ' . s:q1(query)
-  return call('fzf#vim#ag_raw', insert(args, command, 0))
+  return call('skim#vim#ag_raw', insert(args, command, 0))
 endfunction
 
 " ag command suffix, [options]
-function! fzf#vim#ag_raw(command_suffix, ...)
-  return s:fzf(fzf#vim#wrap({
-  \ 'source':  'ag --nogroup --column --color '.a:command_suffix,
+function! skim#vim#ag_raw(command_suffix, ...)
+  return s:skim(skim#vim#wrap({
   \ 'sink*':    s:function('s:ag_handler'),
-  \ 'options': '--ansi --delimiter : --nth 4..,.. --prompt "Ag> " '.
+  \ 'options': '-i -c "ag --nogroup --column --color \"{}\"" '.
+  \            '--ansi --delimiter : --nth 4..,.. --prompt "Ag> " '.
   \            '--multi --bind alt-a:select-all,alt-d:deselect-all '.
-  \            '--color hl:68,hl+:110'}), a:000)
+  \            '--query '.a:command_suffix
+  \            }), a:000)
 endfunction
 
 " ------------------------------------------------------------------
@@ -573,7 +574,7 @@ function! s:btags_sink(lines)
     return
   endif
   normal! m'
-  let cmd = get(get(g:, 'fzf_action', s:default_action), a:lines[0], '')
+  let cmd = get(get(g:, 'skim_action', s:default_action), a:lines[0], '')
   if !empty(cmd)
     execute 'silent' cmd '%'
   endif
@@ -596,13 +597,13 @@ function! s:q(query)
 endfunction
 
 " query, [[tag commands], options]
-function! fzf#vim#buffer_tags(query, ...)
+function! skim#vim#buffer_tags(query, ...)
   let args = copy(a:000)
   let tag_cmds = len(args) > 1 ? remove(args, 0) : [
     \ printf('ctags -f - --sort=no --excmd=number --language-force=%s %s', &filetype, expand('%:S')),
     \ printf('ctags -f - --sort=no --excmd=number %s', expand('%:S'))]
   try
-    return s:fzf(fzf#vim#wrap({
+    return s:skim(skim#vim#wrap({
     \ 'source':  s:btags_source(tag_cmds),
     \ 'sink*':   s:function('s:btags_sink'),
     \ 'options': '--reverse -m -d "\t" --with-nth 1,4.. -n 1 --prompt "BTags> "'.s:q(a:query)}), args)
@@ -620,7 +621,7 @@ function! s:tags_sink(lines)
   endif
   normal! m'
   let qfl = []
-  let cmd = get(get(g:, 'fzf_action', s:default_action), a:lines[0], 'e')
+  let cmd = get(get(g:, 'skim_action', s:default_action), a:lines[0], 'e')
   let [magic, &magic, wrapscan, &wrapscan] = [&magic, 0, &wrapscan, 1]
   for line in a:lines[1:]
     let parts = split(line, '\t\zs')
@@ -639,7 +640,7 @@ function! s:tags_sink(lines)
   normal! zz
 endfunction
 
-function! fzf#vim#tags(query, ...)
+function! skim#vim#tags(query, ...)
   if empty(tagfiles())
     call inputsave()
     echohl WarningMsg
@@ -649,7 +650,7 @@ function! fzf#vim#tags(query, ...)
     redraw
     if gen =~ '^y'
       call s:warn('Preparing tags')
-      call system(get(g:, 'fzf_tags_command', 'ctags -R'))
+      call system(get(g:, 'skim_tags_command', 'ctags -R'))
       if empty(tagfiles())
         return s:warn('Failed to create tags')
       endif
@@ -668,7 +669,7 @@ function! fzf#vim#tags(query, ...)
     let proc = 'perl -ne ''unless (/^\!/) { s/^(.*?)\t(.*?)\t/'.s:yellow('\1', 'Function').'\t'.s:blue('\2', 'String').'\t/; print }'' '
     let copt = '--ansi '
   endif
-  return s:fzf(fzf#vim#wrap({
+  return s:skim(skim#vim#wrap({
   \ 'source':  proc.shellescape(fnamemodify(tagfile, ':t')),
   \ 'sink*':   s:function('s:tags_sink'),
   \ 'dir':     fnamemodify(tagfile, ':h'),
@@ -683,7 +684,7 @@ function! s:inject_snippet(line)
   execute 'normal! a'.s:strip(snip)."\<c-r>=UltiSnips#ExpandSnippet()\<cr>"
 endfunction
 
-function! fzf#vim#snippets(...)
+function! skim#vim#snippets(...)
   if !exists(':UltiSnipsEdit')
     return s:warn('UltiSnips not found')
   endif
@@ -693,7 +694,7 @@ function! fzf#vim#snippets(...)
   endif
   let aligned = sort(s:align_lists(items(list)))
   let colored = map(aligned, 's:yellow(v:val[0])."\t".v:val[1]')
-  return s:fzf({
+  return s:skim({
   \ 'source':  colored,
   \ 'options': '--ansi --tiebreak=index +m -n 1 -d "\t"',
   \ 'sink':    s:function('s:inject_snippet')}, a:000)
@@ -752,15 +753,15 @@ function! s:excmds()
   return commands
 endfunction
 
-function! fzf#vim#commands(...)
+function! skim#vim#commands(...)
   redir => cout
   silent command
   redir END
   let list = split(cout, "\n")
-  return s:fzf({
+  return s:skim({
   \ 'source':  extend(extend(list[0:0], map(list[1:], 's:format_cmd(v:val)')), s:excmds()),
   \ 'sink*':   s:function('s:command_sink'),
-  \ 'options': '--ansi --expect '.get(g:, 'fzf_commands_expect', 'ctrl-x').
+  \ 'options': '--ansi --expect '.get(g:, 'skim_commands_expect', 'ctrl-x').
   \            ' --tiebreak=index --header-lines 1 -x --prompt "Commands> " -n2,3,2..3 -d'.s:nbs}, a:000)
 endfunction
 
@@ -775,19 +776,19 @@ function! s:mark_sink(lines)
   if len(a:lines) < 2
     return
   endif
-  let cmd = get(get(g:, 'fzf_action', s:default_action), a:lines[0], '')
+  let cmd = get(get(g:, 'skim_action', s:default_action), a:lines[0], '')
   if !empty(cmd)
     execute 'silent' cmd
   endif
   execute 'normal! `'.matchstr(a:lines[1], '\S').'zz'
 endfunction
 
-function! fzf#vim#marks(...)
+function! skim#vim#marks(...)
   redir => cout
   silent marks
   redir END
   let list = split(cout, "\n")
-  return s:fzf(fzf#vim#wrap({
+  return s:skim(skim#vim#wrap({
   \ 'source':  extend(list[0:0], map(list[1:], 's:format_mark(v:val)')),
   \ 'sink*':   s:function('s:mark_sink'),
   \ 'options': '+m -x --ansi --tiebreak=index --header-lines 1 --tiebreak=begin --prompt "Marks> "'}), a:000)
@@ -805,10 +806,10 @@ function! s:helptag_sink(line)
   execute 'help' tag
 endfunction
 
-function! fzf#vim#helptags(...)
+function! skim#vim#helptags(...)
   let tags = uniq(sort(split(globpath(&runtimepath, '**/doc/tags'), '\n')))
 
-  return s:fzf({
+  return s:skim({
   \ 'source':  "grep -H '.*' ".join(map(tags, 'shellescape(v:val)')).
     \ "| perl -ne '/(.*?):(.*?)\t(.*?)\t/; printf(qq(".s:green('%-40s', 'Label')."\t%s\t%s\n), $2, $3, $1)' | sort",
   \ 'sink':    s:function('s:helptag_sink'),
@@ -818,8 +819,8 @@ endfunction
 " ------------------------------------------------------------------
 " File types
 " ------------------------------------------------------------------
-function! fzf#vim#filetypes(...)
-  return s:fzf({
+function! skim#vim#filetypes(...)
+  return s:skim({
   \ 'source':  sort(map(split(globpath(&rtp, 'syntax/*.vim'), '\n'),
   \            'fnamemodify(v:val, ":t:r")')),
   \ 'sink':    'setf',
@@ -843,7 +844,7 @@ function! s:windows_sink(line)
   call s:jump(list[1], list[2])
 endfunction
 
-function! fzf#vim#windows(...)
+function! skim#vim#windows(...)
   let lines = []
   for t in range(1, tabpagenr('$'))
     let buffers = tabpagebuflist(t)
@@ -855,7 +856,7 @@ function! fzf#vim#windows(...)
             \ s:format_win(t, w, buffers[w-1])))
     endfor
   endfor
-  return s:fzf({
+  return s:skim({
   \ 'source':  extend(['Tab Win    Name'], lines),
   \ 'sink':    s:function('s:windows_sink'),
   \ 'options': '+m --ansi --tiebreak=begin --header-lines=1'}, a:000)
@@ -869,7 +870,7 @@ function! s:commits_sink(lines)
     return
   endif
 
-  let cmd = get(extend({'ctrl-d': ''}, get(g:, 'fzf_action', s:default_action)), a:lines[0], 'e')
+  let cmd = get(extend({'ctrl-d': ''}, get(g:, 'skim_action', s:default_action)), a:lines[0], 'e')
   let buf = bufnr('')
   for idx in range(1, len(a:lines) - 1)
     let sha = matchstr(a:lines[idx], '[0-9a-f]\{7}')
@@ -894,7 +895,7 @@ function! s:commits(buffer_local, args)
     return s:warn('Not in git repository')
   endif
 
-  let source = 'git log '.get(g:, 'fzf_commits_log_options', '--graph --color=always --format="%C(auto)%h%d %s %C(black)%C(bold)%cr"')
+  let source = 'git log '.get(g:, 'skim_commits_log_options', '--graph --color=always --format="%C(auto)%h%d %s %C(black)%C(bold)%cr"')
   let current = expand('%:S')
   let managed = 0
   if !empty(current)
@@ -910,7 +911,7 @@ function! s:commits(buffer_local, args)
   endif
 
   let command = a:buffer_local ? 'BCommits' : 'Commits'
-  let options = fzf#vim#wrap({
+  let options = skim#vim#wrap({
   \ 'source':  source,
   \ 'sink*':   s:function('s:commits_sink'),
   \ 'options': '--ansi --multi --no-sort --tiebreak=index --reverse '.
@@ -923,19 +924,19 @@ function! s:commits(buffer_local, args)
     let options.options .=        ' --header ":: Press '.s:magenta('CTRL-S', 'Special').' to toggle sort"'
   endif
 
-  return s:fzf(options, a:args)
+  return s:skim(options, a:args)
 endfunction
 
-function! fzf#vim#commits(...)
+function! skim#vim#commits(...)
   return s:commits(0, a:000)
 endfunction
 
-function! fzf#vim#buffer_commits(...)
+function! skim#vim#buffer_commits(...)
   return s:commits(1, a:000)
 endfunction
 
 " ------------------------------------------------------------------
-" fzf#vim#maps(mode, opts[with count and op])
+" skim#vim#maps(mode, opts[with count and op])
 " ------------------------------------------------------------------
 function! s:align_pairs(list)
   let maxlen = 0
@@ -964,7 +965,7 @@ function! s:key_sink(line)
         \ substitute(key, '<[^ >]\+>', '\=eval("\"\\".submatch(0)."\"")', 'g'))
 endfunction
 
-function! fzf#vim#maps(mode, ...)
+function! skim#vim#maps(mode, ...)
   let s:map_gv  = a:mode == 'x' ? 'gv' : ''
   let s:map_cnt = v:count == 0 ? '' : v:count
   let s:map_reg = empty(v:register) ? '' : ('"'.v:register)
@@ -992,16 +993,16 @@ function! fzf#vim#maps(mode, ...)
   let sorted  = sort(aligned)
   let colored = map(sorted, 's:highlight_keys(v:val)')
   let pcolor  = a:mode == 'x' ? 9 : a:mode == 'o' ? 10 : 12
-  return s:fzf({
+  return s:skim({
   \ 'source':  colored,
   \ 'sink':    s:function('s:key_sink'),
   \ 'options': '--prompt "Maps ('.a:mode.')> " --ansi --no-hscroll --nth 1,.. --color prompt:'.pcolor}, a:000)
 endfunction
 
 " ----------------------------------------------------------------------------
-" fzf#vim#complete - completion helper
+" skim#vim#complete - completion helper
 " ----------------------------------------------------------------------------
-inoremap <silent> <Plug>(-fzf-complete-trigger) <c-o>:call <sid>complete_trigger()<cr>
+inoremap <silent> <Plug>(-skim-complete-trigger) <c-o>:call <sid>complete_trigger()<cr>
 
 function! s:pluck(dict, key, default)
   return has_key(a:dict, a:key) ? remove(a:dict, a:key) : a:default
@@ -1012,7 +1013,7 @@ function! s:complete_trigger()
   let opts.options = printf('+m -q %s %s', shellescape(s:query), get(opts, 'options', ''))
   let opts['sink*'] = s:function('s:complete_insert')
   let s:reducer = s:pluck(opts, 'reducer', s:function('s:first_line'))
-  call fzf#run(opts)
+  call skim#run(opts)
 endfunction
 
 " The default reducer
@@ -1054,9 +1055,9 @@ function! s:eval(dict, key, arg)
   return a:dict
 endfunction
 
-function! fzf#vim#complete(...)
+function! skim#vim#complete(...)
   if a:0 == 0
-    let s:opts = g:fzf#vim#default_layout
+    let s:opts = g:skim#vim#default_layout
   elseif type(a:1) == s:TYPE.dict
     if has_key(a:1, 'sink') || has_key(a:1, 'sink*')
       echoerr 'sink not allowed'
@@ -1064,7 +1065,7 @@ function! fzf#vim#complete(...)
     endif
     let s:opts = copy(a:1)
   else
-    let s:opts = extend({'source': a:1}, g:fzf#vim#default_layout)
+    let s:opts = extend({'source': a:1}, g:skim#vim#default_layout)
   endif
 
   let eol = col('$')
@@ -1092,7 +1093,7 @@ function! fzf#vim#complete(...)
       \ join(filter([get(s:opts, 'options', ''), remove(s:opts, 'extra_options')], '!empty(v:val)'))
   endif
 
-  call feedkeys("\<Plug>(-fzf-complete-trigger)")
+  call feedkeys("\<Plug>(-skim-complete-trigger)")
   return ''
 endfunction
 
