@@ -530,20 +530,12 @@ endfunction
 " query, [[ag options], options]
 function! skim#vim#ag(query, ...)
   let query = empty(a:query) ? '^(?=.)' : a:query
-  let args = copy(a:000)
-  let ag_opts = len(args) > 1 ? remove(args, 0) : ''
-  let command = ag_opts . ' ' . s:q1(query)
-  return call('skim#vim#ag_raw', insert(args, command, 0))
-endfunction
-
-" ag command suffix, [options]
-function! skim#vim#ag_raw(command_suffix, ...)
   return s:skim(skim#vim#wrap({
+  \ 'source': "none",
   \ 'sink*':    s:function('s:ag_handler'),
-  \ 'options': '-i -c "ag --nogroup --column --color \"{}\"" '.
-  \            '--ansi --delimiter : --nth 4..,.. --prompt "Ag> " '.
-  \            '--multi --bind alt-a:select-all,alt-d:deselect-all '.
-  \            '--query '.a:command_suffix
+  \ 'options': "-m -i -c 'ag --nogroup --column --color ".get(g:, 'ag_opts', '').' "{}"'."' ".
+  \            '--ansi --prompt "Ag> " --bind alt-a:select-all,alt-d:deselect-all '.
+  \            '--query '.s:q1(query)
   \            }), a:000)
 endfunction
 
