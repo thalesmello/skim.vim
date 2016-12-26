@@ -527,15 +527,14 @@ function! s:ag_handler(lines)
   endif
 endfunction
 
-" query, [[ag options], options]
-function! skim#vim#ag(query, ...)
-  let query = empty(a:query) ? '^(?=.)' : a:query
+" dir, [[ag options], options]
+function! skim#vim#ag(dir, ...)
+  let dir = empty(a:dir) ? '.' : a:dir
   return s:skim(skim#vim#wrap({
   \ 'source': "none",
   \ 'sink*':    s:function('s:ag_handler'),
-  \ 'options': "-m -i -c 'ag --nogroup --column --color ".get(g:, 'ag_opts', '').' "{}"'."' ".
-  \            '--ansi --prompt "Ag> " --bind alt-a:select-all,alt-d:deselect-all '.
-  \            '--query '.s:q1(query)
+  \ 'options': "-m -i -c \"ag --nogroup --column --color ".get(g:, 'ag_opts', '')." '{}' " . dir . ' " '.
+  \            '--ansi --prompt "Ag> " --bind alt-a:select-all,alt-d:deselect-all,alt-b:scroll-left,alt-f:scroll-right '
   \            }), a:000)
 endfunction
 
